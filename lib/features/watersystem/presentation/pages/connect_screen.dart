@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 
-class ConnectScreen extends StatelessWidget {
+class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
+
+  @override
+  State<ConnectScreen> createState() => _ConnectScreenState();
+}
+
+class _ConnectScreenState extends State<ConnectScreen> {
+  bool isWiFiSelected = false; // BLE default
+  bool isConnected = true;
+
+  String deviceName = "ESP32 Controller";
+  String ipAddress = "192.168.1.100";
 
   @override
   Widget build(BuildContext context) {
@@ -9,6 +20,7 @@ class ConnectScreen extends StatelessWidget {
     const cardColor = Color(0xFF111827);
     const accentBlue = Color(0xFF06B6D4);
     const dangerRed = Color(0xFFB91C1C);
+    const mutedText = Color(0xFF9CA3AF);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -16,75 +28,73 @@ class ConnectScreen extends StatelessWidget {
         backgroundColor: bgColor,
         elevation: 0,
         title: const Text(
-          'জল ই জীবন', // title text like your screenshot
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+          'Water System',
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status card
+            // ================= STATUS CARD =================
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // green circle icon
                   Container(
                     width: 36,
                     height: 36,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
+                      color: isConnected
+                          ? const Color(0xFF22C55E)
+                          : dangerRed,
                       shape: BoxShape.circle,
-                      color: Color(0xFF22C55E),
                     ),
-                    child: const Icon(
-                      Icons.check,
+                    child: Icon(
+                      isConnected ? Icons.check : Icons.close,
                       color: Colors.white,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'System Online',
-                          style: TextStyle(
+                          isConnected ? "System Online" : "Disconnected",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'Data stream active. Monitoring sensors.',
-                          style: TextStyle(
-                            color: Color(0xFF9CA3AF),
+                          isConnected
+                              ? "Data stream active. Monitoring sensors."
+                              : "No active connection.",
+                          style: const TextStyle(
+                            color: mutedText,
                             fontSize: 13,
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // Connection card
+            // ================= CONNECTION CARD =================
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: cardColor,
@@ -93,16 +103,11 @@ class ConnectScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Connection Mode',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 13,
-                    ),
-                  ),
+                  const Text("Connection Mode",
+                      style: TextStyle(color: mutedText, fontSize: 13)),
                   const SizedBox(height: 12),
 
-                  // WiFi / BLE segmented control
+                  // ---------- WIFI / BLE SWITCH ----------
                   Container(
                     height: 44,
                     decoration: BoxDecoration(
@@ -111,50 +116,21 @@ class ConnectScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        // WiFi (inactive)
-                        Expanded(
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.wifi, color: Color(0xFF6B7280), size: 18),
-                                SizedBox(width: 6),
-                                Text(
-                                  'WiFi',
-                                  style: TextStyle(
-                                    color: Color(0xFF6B7280),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        _modeButton(
+                          label: "WiFi",
+                          icon: Icons.wifi,
+                          active: isWiFiSelected,
+                          color: accentBlue,
+                          onTap: () =>
+                              setState(() => isWiFiSelected = true),
                         ),
-                        // BLE (active)
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: accentBlue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.bluetooth, color: Colors.white, size: 18),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'BLE',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        _modeButton(
+                          label: "BLE",
+                          icon: Icons.bluetooth,
+                          active: !isWiFiSelected,
+                          color: accentBlue,
+                          onTap: () =>
+                              setState(() => isWiFiSelected = false),
                         ),
                       ],
                     ),
@@ -162,90 +138,159 @@ class ConnectScreen extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Device Name label + field
-                  const Text(
-                    'Device Name',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF020617),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'ESP32 Controller',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
+                  // ---------- DEVICE NAME ----------
+                  _editableField(
+                    label: "Device Name",
+                    value: deviceName,
+                    onSave: (v) => setState(() => deviceName = v),
                   ),
 
                   const SizedBox(height: 20),
 
-                  // IP Address label + field
-                  const Text(
-                    'IP Address',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF020617),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      '192.168.1.100',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
+                  // ---------- IP ADDRESS ----------
+                  _editableField(
+                    label: "IP Address",
+                    value: ipAddress,
+                    onSave: (v) => setState(() => ipAddress = v),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Disconnect button
+                  // ---------- DISCONNECT ----------
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: dangerRed,
-                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       onPressed: () {
-                        // TODO: disconnect logic
+                        setState(() => isConnected = false);
                       },
                       child: const Text(
-                        'DISCONNECT',
+                        "DISCONNECT",
                         style: TextStyle(
-                          fontSize: 16,
                           letterSpacing: 1.2,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
           ],
         ),
       ),
-    
+    );
+  }
+
+  // ================= MODE BUTTON =================
+  Widget _modeButton({
+    required String label,
+    required IconData icon,
+    required bool active,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: active ? color : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: active ? Colors.white : Colors.grey),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? Colors.white : Colors.grey,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ================= EDITABLE FIELD =================
+  Widget _editableField({
+    required String label,
+    required String value,
+    required ValueChanged<String> onSave,
+  }) {
+    final controller = TextEditingController(text: value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                backgroundColor: const Color(0xFF121B2F),
+                title: Text("Edit $label",
+                    style: const TextStyle(color: Colors.white)),
+                content: TextField(
+                  controller: controller,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    filled: true,
+                    fillColor: Color(0xFF1F2A44),
+                    border: OutlineInputBorder(borderSide: BorderSide.none),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child:
+                    const Text("CANCEL", style: TextStyle(color: Colors.red)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      onSave(controller.text.trim().isEmpty
+                          ? value
+                          : controller.text.trim());
+                      Navigator.pop(context);
+                    },
+                    child: const Text("SAVE",
+                        style: TextStyle(color: Colors.green)),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF020617),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(value,
+                style:
+                const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+        ),
+      ],
     );
   }
 }
