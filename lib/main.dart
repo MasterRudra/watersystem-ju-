@@ -3,8 +3,18 @@ import 'package:watersystem/features/watersystem/presentation/pages/connect_scre
 import 'package:watersystem/features/watersystem/presentation/pages/dashboard_screen.dart';
 import 'package:watersystem/features/watersystem/presentation/pages/settings_screen.dart';
 
+import 'package:provider/provider.dart';
+import 'package:watersystem/features/watersystem/presentation/providers/system_provider.dart';
+
 void main() {
-  runApp(const WaterSystemApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SystemProvider()),
+      ],
+      child: const WaterSystemApp(),
+    ),
+  );
 }
 
 class WaterSystemApp extends StatelessWidget {

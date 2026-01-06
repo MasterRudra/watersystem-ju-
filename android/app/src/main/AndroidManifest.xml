@@ -13,6 +13,7 @@
 
     <!-- 🔹 LOCATION (required for BLE scanning) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <!-- 🔹 WIFI / NETWORK -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
