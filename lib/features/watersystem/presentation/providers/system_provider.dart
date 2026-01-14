@@ -4,9 +4,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import '../../data/services/bluetooth_serial_service.dart';
+import '../../data/services/database_service.dart';
 
 class SystemProvider extends ChangeNotifier {
   final BluetoothSerialService _bluetoothService = BluetoothSerialService();
+  final DatabaseService _databaseService = DatabaseService();
 
   // Connection State
   BluetoothDevice? _connectedDevice;
@@ -53,20 +55,26 @@ class SystemProvider extends ChangeNotifier {
   bool get isAutoMode => _isAutoMode;
 
   SystemProvider() {
+    _initDatabase();
     // Listen to incoming data
     _bluetoothService.dataStream.listen(_handleIncomingData);
     
     // Start a periodic timer to update graph if not connected (Simulation)
     // or just to shift graph for visual effect if needed.
     // actual data update is triggered by _handleIncomingData.
-    Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (!isConnected) {
-        // SIMULATION MODE: varying oxygen slightly around 8.0
-        double fluctuation = (DateTime.now().millisecond % 10) / 10.0 - 0.5;
-        double newVal = (_oxygenLevel + fluctuation).clamp(0.0, 15.0);
-        _updateOxygen(newVal); 
-      }
-    });
+    // REMOVING SIMULATION to strictly follow request: graph only active connected
+    // Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    //   if (!isConnected) {
+    //     // SIMULATION MODE: varying oxygen slightly around 8.0
+    //     double fluctuation = (DateTime.now().millisecond % 10) / 10.0 - 0.5;
+    //     double newVal = (_oxygenLevel + fluctuation).clamp(0.0, 15.0);
+    //     _updateOxygen(newVal); 
+    //   }
+    // });
+  }
+
+  Future<void> _initDatabase() async {
+    await _databaseService.connect();
   }
 
   // ================= CONNECTION METHODS =================
@@ -263,6 +271,12 @@ class SystemProvider extends ChangeNotifier {
     if (_oxygenHistory.length > 50) {
       _oxygenHistory.removeAt(0);
     }
+    
+    // Log to MongoDB
+    _databaseService.logSensorData({
+      'oxygen_level': value,
+      'device_id': _connectedDevice?.address ?? 'unknown',
+    });
 
     // AUTO CONTROL LOGIC
     if (_isAutoMode) {

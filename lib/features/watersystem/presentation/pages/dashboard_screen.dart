@@ -187,7 +187,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ---------------- COMBINED OXYGEN & GRAPH CARD ----------------
-  Widget _combinedOxygenGraph(SystemProvider provider) => Container(
+  Widget _combinedOxygenGraph(SystemProvider provider) {
+    if (!provider.isConnected) {
+      return Container(
+        height: 220,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFF121B2F),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF1F2A44)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.bluetooth_disabled, color: Colors.grey, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              "Graph Metrics Disabled",
+              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Connect to microcontroller to view live data",
+              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
     height: 220,
     decoration: BoxDecoration(
       color: const Color(0xFF121B2F),
@@ -227,8 +256,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }).toList();
                     },
                     touchTooltipData: LineTouchTooltipData(
-                      tooltipBgColor: const Color(0xFF1F2A44),
-                      tooltipRoundedRadius: 8,
+                      getTooltipColor: (_) => const Color(0xFF1F2A44),
+
                       getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                         return touchedBarSpots.map((barSpot) {
                           return LineTooltipItem(
@@ -350,6 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     ),
   );
+  }
 
   // ---------------- MOTOR HISTORY ----------------
   Widget _motorStatusHistory(SystemProvider provider) => SizedBox(

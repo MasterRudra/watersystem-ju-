@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1025989699702",
+    "project_id": "watersystem-654e7",
+    "storage_bucket": "watersystem-654e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1025989699702:android:3bf02e6b3b950c0afb5757",
+        "android_client_info": {
+          "package_name": "com.example.watersystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdZVszN1H90QgzcFkyZt_tyLJnjqYXAX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
