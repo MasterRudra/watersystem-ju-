@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:watersystem/features/watersystem/presentation/pages/connect_screen.dart';
 import 'package:watersystem/features/watersystem/presentation/pages/dashboard_screen.dart';
 import 'package:watersystem/features/watersystem/presentation/pages/settings_screen.dart';
+import 'package:watersystem/features/auth/presentation/pages/login_screen.dart';
+import 'package:watersystem/features/auth/data/services/auth_service.dart';
 
 import 'package:provider/provider.dart';
 import 'package:watersystem/features/watersystem/presentation/providers/system_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+     await Firebase.initializeApp();
+  } catch(e) {
+     print("Firebase Init Error: $e");
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -26,7 +37,32 @@ class WaterSystemApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'WaterSystem',
       theme: ThemeData.dark(useMaterial3: true),
-      home: const HomeNav(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: AuthService().authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0B1220),
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF00D2FF))),
+          );
+        }
+        
+        if (snapshot.hasData) {
+           return const HomeNav();
+        }
+        
+        return const LoginScreen();
+      },
     );
   }
 }

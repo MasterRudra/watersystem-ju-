@@ -28,22 +28,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     
-    final user = await _authService.signInWithGoogle();
-    
-    if (user != null) {
-      // Connect to DB and save user
-      // Note: Ideally this should be in a Provider, but doing here for simplicity of task
-      DatabaseService db = DatabaseService();
-      await db.connect();
+    try {
+      final user = await _authService.signInWithGoogle();
       
-      await db.saveUser({
-        'uid': user.uid,
-        'email': user.email,
-        'displayName': user.displayName,
-        'photoURL': user.photoURL,
-      });
-      
-      // Navigation is handled by auth state stream in Main
+      if (user != null) {
+        // Connect to DB and save user
+        DatabaseService db = DatabaseService();
+        await db.connect();
+        
+        await db.saveUser({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+        });
+      }
     } catch (e) {
        print("GOOGLE SIGN IN ERROR: $e");
        showDialog(

@@ -1,29 +1,47 @@
 {
-  "project_info": {
-    "project_number": "1025989699702",
-    "project_id": "watersystem-654e7",
-    "storage_bucket": "watersystem-654e7.firebasestorage.app"
-  },
-  "client": [
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1025989699702:android:3bf02e6b3b950c0afb5757",
-        "android_client_info": {
-          "package_name": "com.example.watersystem"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
+    "project_info": {
+        "project_number": "1025989699702",
+        "project_id": "watersystem-654e7",
+        "storage_bucket": "watersystem-654e7.firebasestorage.app"
+    },
+    "client": [
         {
-          "current_key": "AIzaSyAdZVszN1H90QgzcFkyZt_tyLJnjqYXAX8"
+            "client_info": {
+                "mobilesdk_app_id": "1:1025989699702:android:3bf02e6b3b950c0afb5757",
+                "android_client_info": {
+                    "package_name": "com.example.watersystem"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "1025989699702-nmaasib9t5b46l2v5hob22tnjdeql3pd.apps.googleusercontent.com",
+                    "client_type": 1,
+                    "android_info": {
+                        "package_name": "com.example.watersystem",
+                        "certificate_hash": "94c2cbb1a62a985daf6c0e44fa9a419f4a659dcd"
+                    }
+                },
+                {
+                    "client_id": "1025989699702-li37aldnaalk1posqsvrujg1a90le11i.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyAdZVszN1H90QgzcFkyZt_tyLJnjqYXAX8"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "1025989699702-li37aldnaalk1posqsvrujg1a90le11i.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
         }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    }
-  ],
-  "configuration_version": "1"
+    ],
+    "configuration_version": "1"
 }

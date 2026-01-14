@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import '../../data/services/bluetooth_serial_service.dart';
 import '../../data/services/database_service.dart';
+import '../../data/services/google_sheets_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SystemProvider extends ChangeNotifier {
   final BluetoothSerialService _bluetoothService = BluetoothSerialService();
@@ -278,6 +280,9 @@ class SystemProvider extends ChangeNotifier {
       'device_id': _connectedDevice?.address ?? 'unknown',
     });
 
+    // Log to Google Sheets (Throttled?)
+    _logToSheet(value);
+
     // AUTO CONTROL LOGIC
     if (_isAutoMode) {
       // Thresholds: ON < 5.0, OFF > 6.0
@@ -291,5 +296,29 @@ class SystemProvider extends ChangeNotifier {
     }
 
     if (notify) notifyListeners();
+  }
+
+  // Google Sheets Logging
+  final GoogleSheetsService _sheetsService = GoogleSheetsService();
+  DateTime _lastSheetLogTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Future<void> _logToSheet(double oxygen) async {
+    // Throttle: Log max every 1 minute to avoid API limits
+    if (DateTime.now().difference(_lastSheetLogTime).inMinutes < 1) return;
+    
+    _lastSheetLogTime = DateTime.now();
+
+    final user = FirebaseAuth.instance.currentUser;
+    final userId = user?.uid ?? 'unknown_user';
+    final deviceId = _connectedDevice?.address ?? 'unknown_device';
+    final mode = _isAutoMode ? 'AUTO' : 'MANUAL';
+
+    await _sheetsService.appendRow(
+      userId: userId,
+      deviceId: deviceId,
+      oxygen: oxygen,
+      fanStatus: _pump1On || _pump2On, // Assuming any pump on = Fan/Pump status
+      mode: mode,
+    );
   }
 }
