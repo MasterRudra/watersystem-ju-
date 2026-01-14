@@ -37,6 +37,32 @@ class AuthService {
     }
   }
 
+  Future<User?> signInWithEmail(String email, String password) async {
+    try {
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return userCredential.user;
+    } catch (e) {
+      log("Error signing in with Email: $e");
+      rethrow;
+    }
+  }
+
+  Future<User?> signUpWithEmail(String email, String password) async {
+    try {
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return userCredential.user;
+    } catch (e) {
+      log("Error signing up with Email: $e");
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();

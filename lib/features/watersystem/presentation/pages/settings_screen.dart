@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:watersystem/features/watersystem/presentation/providers/system_provider.dart';
+import 'package:watersystem/features/auth/data/services/auth_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -31,10 +32,57 @@ class SettingsScreen extends StatelessWidget {
             _buildGoogleSheetsCard(context),
             
             const SizedBox(height: 24),
+            const SizedBox(height: 24),
+            _sectionHeader("ACCOUNT"),
+            _buildLogoutCard(context),
+            
+            const SizedBox(height: 24),
             _sectionHeader("ABOUT"),
             _buildAboutCard(),
           ],
         ),
+      ),
+    );
+  }
+
+  // ... (previous helper methods)
+
+  Widget _buildLogoutCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF121B2F),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.logout, color: Colors.red),
+        title: const Text("Sign Out", style: TextStyle(color: Colors.red)),
+        onTap: () async {
+          // Confirm dialog
+          final bool? confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Sign Out'),
+              content: const Text('Are you sure you want to sign out?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            // Sign out directly using the service
+            await AuthService().signOut();
+            // AuthWrapper will auto-redirect to LoginScreen
+          }
+        },
       ),
     );
   }
