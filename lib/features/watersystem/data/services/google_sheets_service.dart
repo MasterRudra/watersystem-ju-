@@ -49,4 +49,23 @@ class GoogleSheetsService {
       print("Error logging to Google Sheet: $e");
     }
   }
+  Future<List<Map<String, dynamic>>> getLogs(String userId) async {
+    if (_webAppUrl == "REPLACE_WITH_YOUR_SCRIPT_URL") return [];
+
+    try {
+      // Append query parameter
+      final response = await http.get(Uri.parse("$_webAppUrl?action=getLogs&userId=$userId"));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse.cast<Map<String, dynamic>>();
+      } else {
+        print("Failed to fetch logs: ${response.statusCode}");
+        return [];
+      }
+    } catch (e) {
+      print("Error fetching logs: $e");
+      return [];
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:watersystem/features/watersystem/presentation/providers/system_provider.dart';
+import 'package:watersystem/features/watersystem/presentation/pages/data_logs_screen.dart';
 import 'package:watersystem/features/auth/data/services/auth_service.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -178,9 +179,9 @@ class SettingsScreen extends StatelessWidget {
         subtitle: const Text("Sync data to cloud automatically", style: TextStyle(color: Colors.white54)),
         trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
         onTap: () {
-          // Placeholder for Google Sheets integration
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Google Sheets integration coming soon...")),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DataLogsScreen()),
           );
         },
       ),

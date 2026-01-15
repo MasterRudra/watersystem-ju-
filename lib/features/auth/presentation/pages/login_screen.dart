@@ -45,18 +45,48 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       User? user;
       if (_isRegistering) {
+        // REGISTER FLOW
         user = await _authService.signUpWithEmail(email, password);
+        if (user != null) {
+          await _authService.sendEmailVerification();
+          await _saveUserToDB(user);
+          await _authService.signOut(); // Force sign out so they have to login after verifying
+          if (mounted) {
+             _showInfo("Account created! A verification email has been sent to ${user.email}. Please verify before logging in.");
+             setState(() => _isRegistering = false); // Switch back to login
+          }
+        }
       } else {
+        // LOGIN FLOW
         user = await _authService.signInWithEmail(email, password);
-      }
-
-      if (user != null) {
-        await _saveUserToDB(user);
+        if (user != null) {
+          if (!user.emailVerified) {
+             await _authService.signOut(); // Don't allow access
+             _showError("Email not verified. Please check your inbox.");
+             // Optional: Add a button to resend verification email here if needed
+          } else {
+             // Success - Save/Update DB and proceed (AuthWrapper handles nav)
+             await _saveUserToDB(user);
+          }
+        }
       }
     } catch (e) {
       _showError(e.toString());
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  void _showInfo(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Success", style: TextStyle(color: Colors.green)),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveUserToDB(User user) async {
