@@ -315,10 +315,8 @@ class SystemProvider extends ChangeNotifier {
 
     await _sheetsService.appendRow(
       userId: userId,
-      deviceId: deviceId,
       oxygen: oxygen,
-      fanStatus: _pump1On || _pump2On, // Assuming any pump on = Fan/Pump status
-      mode: mode,
+      fanStatus: _pump1On || _pump2On, 
     );
   }
 }

@@ -7,10 +7,8 @@ class GoogleSheetsService {
 
   Future<void> appendRow({
     required String userId,
-    required String deviceId,
     required double oxygen,
     required bool fanStatus,
-    required String mode,
   }) async {
     if (_webAppUrl == "REPLACE_WITH_YOUR_SCRIPT_URL") {
       print("Google Sheets URL not configured.");
@@ -22,16 +20,13 @@ class GoogleSheetsService {
       final String date = "${now.year}-${now.month}-${now.day}";
       final String time = "${now.hour}:${now.minute}:${now.second}";
 
-      // Prepare payload matching the requested columns:
-      // UserID | DeviceID | Date | Time | Oxygen | Fan | Mode
+      // Payload: UserID | Date | Time | Oxygen | Fan
       final Map<String, dynamic> data = {
         "userID": userId,
-        "deviceID": deviceId,
         "date": date,
         "time": time,
         "oxygen": oxygen,
-        "fan": fanStatus ? "ON" : "OFF",
-        "mode": mode,
+        "fan": fanStatus ? "ON" : "OFF"
       };
 
       final response = await http.post(
