@@ -29,10 +29,14 @@ class SettingsScreen extends StatelessWidget {
             _buildTimeSyncCard(context, provider),
             
             const SizedBox(height: 24),
+            const SizedBox(height: 24),
             _sectionHeader("CLOUD INTEGRATION"),
             _buildGoogleSheetsCard(context),
             
             const SizedBox(height: 24),
+            _sectionHeader("DANGER ZONE"),
+            _buildEraseDataCard(context, provider),
+            
             const SizedBox(height: 24),
             _sectionHeader("ACCOUNT"),
             _buildLogoutCard(context),
@@ -42,6 +46,47 @@ class SettingsScreen extends StatelessWidget {
             _buildAboutCard(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEraseDataCard(BuildContext context, SystemProvider provider) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF121B2F),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.delete_sweep, color: Colors.orange),
+        title: const Text("Erase Stored Data", style: TextStyle(color: Colors.white)),
+        subtitle: const Text("Clear all sensor logs locally", style: TextStyle(color: Colors.white54, fontSize: 13)),
+        onTap: () async {
+          final bool? confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Erase All Data?'),
+              content: const Text('This will permanently delete all sensor logs stored on this device. Cloud data will not be affected.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Erase', style: TextStyle(color: Colors.orange)),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            await provider.clearLocalData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("All local logs erased successfully.")),
+            );
+          }
+        },
       ),
     );
   }

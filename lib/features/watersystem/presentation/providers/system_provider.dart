@@ -56,27 +56,21 @@ class SystemProvider extends ChangeNotifier {
   bool _isAutoMode = false;
   bool get isAutoMode => _isAutoMode;
 
+  // Last Logged State (to prevent repetitive entries)
+  double? _lastLoggedOxygen;
+  bool? _lastLoggedPump1;
+  bool? _lastLoggedPump2;
+  bool? _lastLoggedAuto;
+
   SystemProvider() {
     _initDatabase();
     // Listen to incoming data
     _bluetoothService.dataStream.listen(_handleIncomingData);
-    
-    // Start a periodic timer to update graph if not connected (Simulation)
-    // or just to shift graph for visual effect if needed.
-    // actual data update is triggered by _handleIncomingData.
-    // REMOVING SIMULATION to strictly follow request: graph only active connected
-    // Timer.periodic(const Duration(milliseconds: 500), (timer) {
-    //   if (!isConnected) {
-    //     // SIMULATION MODE: varying oxygen slightly around 8.0
-    //     double fluctuation = (DateTime.now().millisecond % 10) / 10.0 - 0.5;
-    //     double newVal = (_oxygenLevel + fluctuation).clamp(0.0, 15.0);
-    //     _updateOxygen(newVal); 
-    //   }
-    // });
   }
 
   Future<void> _initDatabase() async {
-    await _databaseService.connect();
+    // Non-blocking init
+    _databaseService.connect().then((_) => print("SQLite initialized")).catchError((e) => print("DB Init Error: $e"));
   }
 
   // ================= CONNECTION METHODS =================
@@ -111,6 +105,7 @@ class SystemProvider extends ChangeNotifier {
   void toggleAutoMode(bool value) {
     _isAutoMode = value;
     _sendControlCommand("AUTO:${value ? 'ON' : 'OFF'}");
+    _recordStateToDB();
     notifyListeners();
   }
 
@@ -120,15 +115,11 @@ class SystemProvider extends ChangeNotifier {
   }
 
   List<double> _generateMockData(String frame) {
-    // Generate simplified mock curve for demo
     int points = 50;
     double base = 8.0;
     List<double> mock = [];
     for(int i=0; i<points; i++) {
-       // Create a visually pleasing curve
-       double val = base + 3 * (i/points) * (i%2==0 ? 1 : -0.5); 
-       // Just simple sine wave like variation
-       val = 8.0 + 2 * sin(i/10.0);  
+       double val = 8.0 + 2 * sin(i/10.0);  
        if (frame == '1M') val += 1.0;
        mock.add(val.clamp(0.0, 15.0));
     }
@@ -145,6 +136,7 @@ class SystemProvider extends ChangeNotifier {
     _pump1On = value;
     _sendControlCommand("PUMP1:${value ? 'ON' : 'OFF'}");
     _logMotorStatus("Pump 1", value);
+    _recordStateToDB();
     notifyListeners();
   }
 
@@ -152,6 +144,7 @@ class SystemProvider extends ChangeNotifier {
     _pump2On = value;
     _sendControlCommand("PUMP2:${value ? 'ON' : 'OFF'}");
     _logMotorStatus("Pump 2", value);
+    _recordStateToDB();
     notifyListeners();
   }
 
@@ -183,7 +176,6 @@ class SystemProvider extends ChangeNotifier {
 
   void syncDeviceTime() {
     final now = DateTime.now();
-    // Format: YYYY-MM-DD HH:MM:SS
     String formattedTime = "${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} "
         "${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}:${now.second.toString().padLeft(2,'0')}";
     
@@ -198,54 +190,78 @@ class SystemProvider extends ChangeNotifier {
     data = data.trim();
     if (data.isEmpty) return;
 
-    // Log raw data for debugging (visible in Motor Logs for now)
-    // Log raw data for debugging (visible in Motor Logs for now)
-    // _motorLogs.insert(0, "RX: $data");  
-
-    bool shouldNotify = false;
+    bool stateChanged = false;
+    bool oxygenUpdated = false;
 
     try {
-      // 1. JSON Format: {"oxygen": 8.5, "pump1": true}
+      // 1. JSON Format: {"oxygen": 8.5, "pump1": true, "pump2": false}
       if (data.startsWith('{') && data.endsWith('}')) {
         final Map<String, dynamic> json = jsonDecode(data);
+        
         if (json.containsKey('oxygen')) {
-          _updateOxygen((json['oxygen'] as num).toDouble(), notify: false);
-          shouldNotify = true;
+          _oxygenLevel = (json['oxygen'] as num).toDouble();
+          _oxygenHistory.add(_oxygenLevel);
+          if (_oxygenHistory.length > 50) _oxygenHistory.removeAt(0);
+          oxygenUpdated = true;
+          stateChanged = true;
         }
+
         if (json.containsKey('pump1')) {
           bool newVal = json['pump1'] as bool;
           if (_pump1On != newVal) {
             _pump1On = newVal;
             _logMotorStatus("Pump 1", newVal);
-            shouldNotify = true;
+            stateChanged = true;
           }
         }
+
         if (json.containsKey('pump2')) {
           bool newVal = json['pump2'] as bool;
           if (_pump2On != newVal) {
             _pump2On = newVal;
             _logMotorStatus("Pump 2", newVal);
-            shouldNotify = true;
+            stateChanged = true;
           }
         }
       } 
-      // 2. Key:Value pair(s) Format: "O:8.5 F:0" or "Oxygen:8.5"
+      // 2. Key:Value pair(s) Format: "O:8.5,P1:1" or "Oxygen:8.5"
       else if (data.contains(':')) {
-        // Split by space to handle multiple pairs like "O:8.5 F:0"
-        final tokens = data.split(RegExp(r'\s+'));
-        
+        final tokens = data.split(RegExp(r'[\s,;]+'));
         for (final token in tokens) {
           final parts = token.split(':');
-           if (parts.length == 2) {
+          if (parts.length == 2) {
             final key = parts[0].toLowerCase().trim();
             final value = parts[1].trim();
             
             if (key == 'o' || key == 'oxygen' || key == 'o2' || key == 'val') {
-               final double? val = double.tryParse(value);
-               if (val != null) {
-                 _updateOxygen(val, notify: false);
-                 shouldNotify = true;
-               }
+              final double? val = double.tryParse(value);
+              if (val != null) {
+                _oxygenLevel = val;
+                _oxygenHistory.add(val);
+                if (_oxygenHistory.length > 50) _oxygenHistory.removeAt(0);
+                oxygenUpdated = true;
+                stateChanged = true;
+              }
+            } else if (key == 'p1' || key == 'pump1' || key == 'p') {
+              bool newVal = value == '1' || value.toLowerCase() == 'on' || value.toLowerCase() == 'true';
+              if (_pump1On != newVal) {
+                _pump1On = newVal;
+                _logMotorStatus("Pump 1", newVal);
+                stateChanged = true;
+              }
+            } else if (key == 'p2' || key == 'pump2') {
+              bool newVal = value == '1' || value.toLowerCase() == 'on' || value.toLowerCase() == 'true';
+              if (_pump2On != newVal) {
+                _pump2On = newVal;
+                _logMotorStatus("Pump 2", newVal);
+                stateChanged = true;
+              }
+            } else if (key == 'a' || key == 'auto') {
+              bool newVal = value == '1' || value.toLowerCase() == 'on' || value.toLowerCase() == 'true';
+              if (_isAutoMode != newVal) {
+                _isAutoMode = newVal;
+                stateChanged = true;
+              }
             }
           }
         }
@@ -254,69 +270,123 @@ class SystemProvider extends ChangeNotifier {
       else {
         final double? val = double.tryParse(data);
         if (val != null) {
-          _updateOxygen(val, notify: false);
-          shouldNotify = true;
+          _oxygenLevel = val;
+          _oxygenHistory.add(val);
+          if (_oxygenHistory.length > 50) _oxygenHistory.removeAt(0);
+          oxygenUpdated = true;
+          stateChanged = true;
+        }
+      }
+
+      if (stateChanged) {
+        // Run Auto Control before logging if oxygen was updated
+        if (oxygenUpdated && _isAutoMode) {
+          _runAutoControlLogic();
+        }
+        
+        // Log final state to SQLite
+        _recordStateToDB();
+        
+        // Final UI update
+        notifyListeners();
+        
+        // Throttled log to Google Sheets if oxygen updated
+        if (oxygenUpdated) {
+          _logToSheet(_oxygenLevel);
         }
       }
     } catch (e) {
       print("Error parsing data: $e");
     }
+  }
 
-    if (shouldNotify) {
-      notifyListeners();
+  void _runAutoControlLogic() {
+    if (_oxygenLevel < 5.0 && !_pump1On) {
+      _pump1On = true;
+      _sendControlCommand("PUMP1:ON");
+      _logMotorStatus("Pump 1", true);
+      _motorLogs.insert(0, "AUTO: Low Oxygen ($_oxygenLevel) -> PUMP 1 ON");
+    } else if (_oxygenLevel > 6.0 && _pump1On) {
+      _pump1On = false;
+      _sendControlCommand("PUMP1:OFF");
+      _logMotorStatus("Pump 1", false);
+      _motorLogs.insert(0, "AUTO: Oxygen Normal ($_oxygenLevel) -> PUMP 1 OFF");
     }
   }
 
+  void _recordStateToDB() {
+    // Only save if something changed
+    if (_oxygenLevel == _lastLoggedOxygen &&
+        _pump1On == _lastLoggedPump1 &&
+        _pump2On == _lastLoggedPump2 &&
+        _isAutoMode == _lastLoggedAuto) {
+      return; 
+    }
+
+    _lastLoggedOxygen = _oxygenLevel;
+    _lastLoggedPump1 = _pump1On;
+    _lastLoggedPump2 = _pump2On;
+    _lastLoggedAuto = _isAutoMode;
+
+    final user = FirebaseAuth.instance.currentUser;
+    _databaseService.logSensorData({
+      'userId': user?.uid ?? 'unknown',
+      'oxygen_level': _oxygenLevel,
+      'pump1': _pump1On,
+      'pump2': _pump2On,
+      'isAutoMode': _isAutoMode,
+    }).catchError((e) => print("Local Log Error: $e"));
+  }
+
+  // Deprecated helper or redirected
   void _updateOxygen(double value, {bool notify = true}) {
+    // This is now effectively merged into _handleIncomingData for safety.
+    // If called manually (e.g. simulation), we still want it to work.
     _oxygenLevel = value;
     _oxygenHistory.add(value);
-    if (_oxygenHistory.length > 50) {
-      _oxygenHistory.removeAt(0);
-    }
+    if (_oxygenHistory.length > 50) _oxygenHistory.removeAt(0);
     
-    // Log to MongoDB
-    _databaseService.logSensorData({
-      'oxygen_level': value,
-      'device_id': _connectedDevice?.address ?? 'unknown',
-    });
-
-    // Log to Google Sheets (Throttled?)
+    if (_isAutoMode) _runAutoControlLogic();
+    _recordStateToDB();
     _logToSheet(value);
-
-    // AUTO CONTROL LOGIC
-    if (_isAutoMode) {
-      // Thresholds: ON < 5.0, OFF > 6.0
-      if (value < 5.0 && !_pump1On) {
-        togglePump1(true);
-        _motorLogs.insert(0, "AUTO: Low Oxygen ($value) -> PUMP 1 ON");
-      } else if (value > 6.0 && _pump1On) {
-        togglePump1(false);
-         _motorLogs.insert(0, "AUTO: Oxygen Normal ($value) -> PUMP 1 OFF");
-      }
-    }
-
+    
     if (notify) notifyListeners();
   }
 
   // Google Sheets Logging
   final GoogleSheetsService _sheetsService = GoogleSheetsService();
   DateTime _lastSheetLogTime = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _isSyncing = false;
 
   Future<void> _logToSheet(double oxygen) async {
-    // Throttle: Log max every 1 minute to avoid API limits
-    if (DateTime.now().difference(_lastSheetLogTime).inMinutes < 1) return;
-    
+    // Throttle: Log max every 30 seconds
+    if (DateTime.now().difference(_lastSheetLogTime).inSeconds < 30) return;
+    if (_isSyncing) return;
+
+    _isSyncing = true;
     _lastSheetLogTime = DateTime.now();
 
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid ?? 'unknown_user';
-    final deviceId = _connectedDevice?.address ?? 'unknown_device';
-    final mode = _isAutoMode ? 'AUTO' : 'MANUAL';
 
-    await _sheetsService.appendRow(
-      userId: userId,
-      oxygen: oxygen,
-      fanStatus: _pump1On || _pump2On, 
-    );
+    // We can also sync any missed local logs here if we want to implement a robust sync
+    // For now, let's just log the current value as before, but safely
+    try {
+      await _sheetsService.appendRow(
+        userId: userId,
+        oxygen: oxygen,
+        fanStatus: _pump1On || _pump2On, 
+      );
+      // Optional: Mark local records as synced if we fetch them here
+    } catch (e) {
+      print("Sheet Sync Error: $e");
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  Future<void> clearLocalData() async {
+    await _databaseService.eraseAllData();
+    notifyListeners();
   }
 }

@@ -61,16 +61,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ---------------- PUMP GRID ----------------
   Widget _pumpGrid(BuildContext context, SystemProvider provider) {
-    bool areControlsEnabled = provider.isConnected && !provider.isAutoMode;
+    bool pump1Enabled = provider.isConnected && !provider.isAutoMode;
+    bool pump2Enabled = provider.isConnected; // Autofeeder remains manual only
     
     return Row(
       children: [
         PumpSwitchCard(
           title: provider.pump1Name,
           isOn: provider.pump1On,
-          isEnabled: areControlsEnabled,
+          isEnabled: pump1Enabled,
           onToggle: () {
-            if (areControlsEnabled) provider.togglePump1(!provider.pump1On);
+            if (pump1Enabled) provider.togglePump1(!provider.pump1On);
           },
           onLongPress: () => _renamePumpDialog(context, provider, 1),
         ),
@@ -78,9 +79,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         PumpSwitchCard(
           title: provider.pump2Name,
           isOn: provider.pump2On,
-          isEnabled: areControlsEnabled,
+          isEnabled: pump2Enabled,
           onToggle: () {
-            if (areControlsEnabled) provider.togglePump2(!provider.pump2On);
+            if (pump2Enabled) provider.togglePump2(!provider.pump2On);
           },
           onLongPress: () => _renamePumpDialog(context, provider, 2),
         ),

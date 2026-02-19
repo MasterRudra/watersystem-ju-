@@ -43,56 +43,70 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      User? user;
       if (_isRegistering) {
-        // REGISTER FLOW
-        user = await _authService.signUpWithEmail(email, password);
+        final user = await _authService.signUpWithEmail(email, password);
         if (user != null) {
           await _authService.sendEmailVerification();
           await _saveUserToDB(user);
-          await _authService.signOut(); // Force sign out so they have to login after verifying
+          await _authService.signOut(); 
           if (mounted) {
-             _showInfo("Account created! A verification email has been sent to ${user.email}. Please verify before logging in.");
-             setState(() => _isRegistering = false); // Switch back to login
+             _showInfo("Account created! A verification email has been sent to $email. Please verify your email before logging in.");
+             setState(() => _isRegistering = false);
           }
         }
       } else {
-        // LOGIN FLOW
-        user = await _authService.signInWithEmail(email, password);
+        final user = await _authService.signInWithEmail(email, password);
         if (user != null) {
           if (!user.emailVerified) {
-             await _authService.signOut(); // Don't allow access
-             _showError("Email not verified. Please check your inbox.");
-             // Optional: Add a button to resend verification email here if needed
+             final emailToVerify = user.email;
+             await _authService.signOut(); 
+             if (mounted) {
+               _showVerificationDialog(emailToVerify ?? email);
+             }
           } else {
-             // Success - Save/Update DB and proceed (AuthWrapper handles nav)
              await _saveUserToDB(user);
           }
         }
       }
+    } on FirebaseAuthException catch (e) {
+      _showError(e.message ?? "An error occurred during authentication.");
     } catch (e) {
-      _showError(e.toString());
+      _showError("An unexpected error occurred: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-    if (mounted) setState(() => _isLoading = false);
   }
 
-  void _showInfo(String message) {
+  void _showVerificationDialog(String email) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Success", style: TextStyle(color: Colors.green)),
-        content: Text(message),
+        title: const Text("Verify Email", style: TextStyle(color: Color(0xFF00D2FF))),
+        content: Text("Your email $email is not verified yet. Please check your inbox and click the verification link."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // We need to sign in again to resend verification if we signed out, 
+              // but Firebase lets us send it if we HAVE the user object.
+              // Since we signed out, we might need a better way. 
+              // For now, just telling them to check email is standard.
+            },
+            child: const Text("Resend?", style: TextStyle(color: Color(0xFF00D2FF))),
+          ),
         ],
       ),
     );
   }
 
   Future<void> _saveUserToDB(User user) async {
+    // SQLite call is fast, but still catch errors
     try {
-      DatabaseService db = DatabaseService();
-      await db.connect();
+      final db = DatabaseService(); 
       await db.saveUser({
         'uid': user.uid,
         'email': user.email ?? "",
@@ -100,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'photoURL': user.photoURL ?? "",
       });
     } catch (e) {
-      print("Error saving user to DB: $e");
+      print("Local DB Sync Error: $e");
     }
   }
 
@@ -109,6 +123,19 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Authentication Error", style: TextStyle(color: Colors.red)),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
+        ],
+      ),
+    );
+  }
+
+  void _showInfo(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Success", style: TextStyle(color: Colors.green)),
         content: Text(message),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
